@@ -1,0 +1,5 @@
+dist
+ialogs-private/config/local.php
+ialogs-private/storage
+*.log
+*.zip

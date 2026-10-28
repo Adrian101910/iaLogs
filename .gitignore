@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+frontend/node_modules/
+frontend/dist/
+*.tsbuildinfo
+.tools/
+.local/
+*.checkpoint.json
+*.log
+php-site/ialogs-private/config/local.php
+php-site/ialogs-private/storage/
+php-site/dist/

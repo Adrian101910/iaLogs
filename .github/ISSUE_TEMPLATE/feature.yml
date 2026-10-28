@@ -1,0 +1,15 @@
+name: Propuesta de mejora
+description: Explica una necesidad y el comportamiento que propones.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Necesidad
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Propuesta y alternativas
+    validations:
+      required: true

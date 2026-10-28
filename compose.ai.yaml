@@ -1,0 +1,12 @@
+# Ollama privado para Windows, Linux y macOS. No descarga modelos al arrancar.
+services:
+  backend:
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+  ollama:
+    image: ollama/ollama@sha256:20d1bbfbabe1c97ba4b16301f08a20d8484bcf77047742a3cb71c613d8e12d0b
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: unless-stopped
+volumes:
+  ollama_models:

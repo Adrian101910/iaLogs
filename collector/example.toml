@@ -1,0 +1,10 @@
+# Colector de texto UTF-8, una línea = un evento. Sin parsear severidad/fecha original.
+file = "/logs/app.log"
+checkpoint = "/state/app.checkpoint.json"
+source = "text-file-demo"
+service = "plain-text"
+severity = "INFO"
+url = "http://127.0.0.1:8000"
+batch_size = 100
+poll_seconds = 1
+max_line_bytes = 16384

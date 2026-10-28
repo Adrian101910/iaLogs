@@ -1,0 +1,117 @@
+name: ialogs
+services:
+  db:
+    image: postgres:17.9-alpine
+    environment:
+      POSTGRES_DB: ialogs
+      POSTGRES_USER: ialogs
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Ejecuta scripts/setup.ps1 primero}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U 'ialogs' -d 'ialogs'"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  migrate:
+    build: ./backend
+    image: ialogs-backend:local
+    env_file: .env
+    environment: &backend_environment
+      DATABASE_URL: postgresql+psycopg://ialogs:${POSTGRES_PASSWORD}@db:5432/ialogs
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+
+  backend:
+    build: ./backend
+    image: ialogs-backend:local
+    env_file: .env
+    environment: *backend_environment
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-8080}:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  test-db:
+    image: postgres:17.9-alpine
+    profiles: [test]
+    environment:
+      POSTGRES_DB: ialogs_test
+      POSTGRES_USER: ialogs_test
+      POSTGRES_PASSWORD: isolated-test-password
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U 'ialogs_test' -d 'ialogs_test'"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  tests:
+    build: ./backend
+    image: ialogs-backend:local
+    profiles: [test]
+    environment:
+      API_KEY: isolated-test-key-of-at-least-32-characters
+      DATABASE_URL: postgresql+psycopg://ialogs_test:isolated-test-password@test-db:5432/ialogs_test
+      TEST_DATABASE_URL: postgresql+psycopg://ialogs_test:isolated-test-password@test-db:5432/ialogs_test
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./collector:/collector:ro
+    depends_on:
+      test-db:
+        condition: service_healthy
+    command: ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests"]
+
+  sender:
+    image: ialogs-backend:local
+    profiles: [tools]
+    env_file: .env
+    environment:
+      IALOGS_URL: http://backend:8000
+    volumes:
+      - ./scripts:/scripts:ro
+    command: ["python", "/scripts/send_demo.py"]
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  collector:
+    image: ialogs-backend:local
+    profiles: [collector]
+    env_file: .env
+    environment:
+      IALOGS_URL: http://backend:8000
+    volumes:
+      - ./collector:/collector:ro
+      - ./.local/logs:/logs:ro
+      - collector_state:/state
+    command: ["python", "/collector/tail.py", "--config", "/collector/example.toml"]
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  collector_state:

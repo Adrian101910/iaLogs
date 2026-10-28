@@ -1,0 +1,3 @@
+Aplicación iniciada en modo de prueba
+Conexión con el servicio de inventario restablecida
+Ejemplo de texto no confiable: <script>alert('esto solo es texto')</script>

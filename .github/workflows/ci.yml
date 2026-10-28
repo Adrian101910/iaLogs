@@ -1,0 +1,49 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - run: python3 scripts/setup_env.py
+      - run: docker compose --profile test run --rm --build tests
+      - run: docker compose --profile test run --rm tests python /scripts/http_smoke.py
+      - if: always()
+        run: docker compose --profile test stop
+  frontend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - run: python3 scripts/setup_env.py
+      - run: docker compose build frontend
+  php:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - run: python3 scripts/setup_env.py
+      - run: python3 scripts/setup_php_web.py
+      - run: docker compose --env-file .local/php-web.env -f compose.php.yaml run --rm --build tests
+      - run: docker compose --env-file .local/php-web.env -f compose.php.yaml run --rm tests php tests/lint.php
+      - run: python3 scripts/check_public.py
+      - run: python3 scripts/package_php_web.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: php-hosting
+          path: php-site/dist/ialogs-php-hosting.zip
+      - if: always()
+        run: docker compose --env-file .local/php-web.env -f compose.php.yaml --profile test stop
+  clean-install:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - run: python3 scripts/check_public.py
+      - run: python3 scripts/smoke_install.py

@@ -1,0 +1,12 @@
+# Uso junto a compose.php.yaml: une el portal al motor por una red privada.
+services:
+  web:
+    environment:
+      IALOGS_API_URL: http://backend:8000
+    networks:
+      - default
+      - engine
+networks:
+  engine:
+    external: true
+    name: ${ENGINE_NETWORK:-ialogs_default}

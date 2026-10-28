@@ -1,0 +1,13 @@
+services:
+  lock-backend:
+    image: python:3.12.12-slim-bookworm
+    volumes:
+      - ./backend:/work
+    working_dir: /work
+    command: ["sh", "-c", "pip install pip-tools==7.5.1 && pip-compile --generate-hashes --strip-extras --output-file=requirements.lock requirements-dev.in"]
+  lock-frontend:
+    image: node:22.18.0-alpine
+    volumes:
+      - ./frontend:/work
+    working_dir: /work
+    command: ["npm", "install", "--package-lock-only", "--ignore-scripts", "--no-fund", "--no-audit"]

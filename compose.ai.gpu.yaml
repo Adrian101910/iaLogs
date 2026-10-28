@@ -1,0 +1,4 @@
+# Opcional: NVIDIA con soporte GPU de Docker configurado por el usuario.
+services:
+  ollama:
+    gpus: all

@@ -1,0 +1,23 @@
+name: Error reproducible
+description: Describe un fallo con pasos para reproducirlo sin datos sensibles.
+body:
+  - type: textarea
+    id: expected
+    attributes:
+      label: Qué esperabas y qué ocurrió
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+      description: Usa eventos sintéticos. No pegues .env, claves ni logs privados.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Entorno
+      description: Sistema, versión de Docker/Compose, componente afectado y modelo si aplica.
+    validations:
+      required: true

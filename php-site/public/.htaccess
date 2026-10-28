@@ -1,0 +1,8 @@
+Options -Indexes
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+<Files "_init.php">
+    Require all denied
+</Files>
+DirectoryIndex index.php

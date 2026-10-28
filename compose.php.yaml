@@ -1,0 +1,94 @@
+name: ialogs-php
+services:
+  mysql:
+    image: mysql:8.4@sha256:a0225d1ea6631c8bc2385dc4c2faba17bbf1834ecf369e1659a9a382bd8d5dd7
+    environment:
+      MYSQL_DATABASE: ialogs_web
+      MYSQL_USER: ialogs_web
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Ejecuta scripts/setup_php_web.py}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Ejecuta scripts/setup_php_web.py}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -u ialogs_web -D ialogs_web -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+    restart: unless-stopped
+
+  setup:
+    build: ./php-site
+    image: ialogs-php:local
+    environment: &web_environment
+      APP_ENV: local
+      SESSION_SECURE: "0"
+      APP_SECRET: ${APP_SECRET:?Ejecuta scripts/setup_php_web.py}
+      DB_HOST: mysql
+      DB_NAME: ialogs_web
+      DB_USER: ialogs_web
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      IALOGS_API_URL: ${IALOGS_API_URL}
+      IALOGS_API_KEY: ${IALOGS_API_KEY}
+      APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD}
+    command: ["php", "ialogs-private/bin/setup.php"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  web:
+    build: ./php-site
+    image: ialogs-php:local
+    environment:
+      <<: *web_environment
+      APP_ADMIN_EMAIL: ""
+      APP_ADMIN_PASSWORD: ""
+    ports:
+      - "127.0.0.1:${PHP_PORT:-8090}:80"
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1/health.php') === false ? 1 : 0);"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+    restart: unless-stopped
+
+  mysql-test:
+    image: mysql:8.4@sha256:a0225d1ea6631c8bc2385dc4c2faba17bbf1834ecf369e1659a9a382bd8d5dd7
+    profiles: [test]
+    environment:
+      MYSQL_DATABASE: ialogs_web_test
+      MYSQL_USER: ialogs_web_test
+      MYSQL_PASSWORD: isolated-php-test-password
+      MYSQL_ROOT_PASSWORD: isolated-php-root-test-password
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -u ialogs_web_test -D ialogs_web_test -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  tests:
+    build: ./php-site
+    image: ialogs-php:local
+    profiles: [test]
+    environment:
+      APP_ENV: local
+      SESSION_SECURE: "0"
+      APP_SECRET: isolated-php-test-secret-at-least-32-characters
+      DB_HOST: mysql-test
+      DB_NAME: ialogs_web_test
+      DB_USER: ialogs_web_test
+      DB_PASSWORD: isolated-php-test-password
+      IALOGS_API_URL: http://127.0.0.1:9
+      IALOGS_API_KEY: isolated-engine-key-at-least-32-characters
+    command: ["php", "tests/run.php"]
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
